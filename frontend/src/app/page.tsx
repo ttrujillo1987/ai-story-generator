@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export default function Home() {
   const [name, setName] = useState("");
-  const [gender, setGender] = useState("boy");
+  const [character, setCharacter] = useState("");
   const [topic, setTopic] = useState("");
   const [story, setStory] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,7 @@ export default function Home() {
       const response = await fetch("http://localhost:8000/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, gender, topic }),
+        body: JSON.stringify({ name, character, topic }),
       });
 
       const data = await response.json();
@@ -31,28 +31,16 @@ export default function Home() {
 
   return (
     <div className="container">
-      <h1 className="title">AI-Powered Children's Story Generator</h1>
+      <h1>AI-Powered Children's Story Generator</h1>
       <div className="input-container">
-        <input
-          placeholder="Child's Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <select value={gender} onChange={(e) => setGender(e.target.value)}>
-          <option value="boy">Boy</option>
-          <option value="girl">Girl</option>
-        </select>
-        <input
-          placeholder="Story Topic"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-        />
+        <input placeholder="Child's Name" value={name} onChange={(e) => setName(e.target.value)} />
+        <input placeholder="Character (eg. Boy, Girl, Alien, Mouse)" value={character} onChange={(e) => setCharacter(e.target.value)} />
+        <input placeholder="Story Topic (eg. Space Adventure)" value={topic} onChange={(e) => setTopic(e.target.value)} />
         <button onClick={generateStory} disabled={loading}>
           {loading ? "Generating..." : "Generate Story"}
         </button>
       </div>
       <p className="story">{story}</p>
-
       <style jsx>{`
         .container {
           text-align: center;
@@ -66,9 +54,7 @@ export default function Home() {
           margin: 20px auto;
           width: 300px;
         }
-        input,
-        select,
-        button {
+        input, select, button {
           padding: 10px;
           font-size: 16px;
         }
