@@ -1,3 +1,6 @@
+from sqlalchemy import create_engine, Column, Integer, String, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, Session
 import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -10,12 +13,45 @@ from fastapi.middleware.cors import CORSMiddleware
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Set database
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+
 # Check if API key is loaded
 if not OPENAI_API_KEY:
     raise ValueError("Error: OPENAI_API_KEY is not set in the .env file!")
 
 # Initialize OpenAI API
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
+
+# Story model for database
+class Story(Base):
+    __tablename__ = "stories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    character = Column(String)
+    topic = Column(String)
+    story = Column(Text)
+    image_url = Column(String)
+
+# Pydantic model for API requests and responses
+class StoryCreate(BaseModel):
+    name: str
+    character: str
+    topic: str
+    story: str
+    image_url: str
+
+# Request model
+class StoryRequest(BaseModel):
+    name: str
+    character: str
+    topic: str
+
+# Create database table
+Base.metadata.create_all(bind=engine)
 
 # FastAPI app
 app = FastAPI()
@@ -29,15 +65,59 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request model
-class StoryRequest(BaseModel):
-    name: str
-    character: str
-    topic: str
+# Get all past saved stories 
+@app.get("/stories")
+def get_stories():
+    session = SessionLocal()
+    stories = session.query(Story).all()
+    session.close()
+    return [
+        {
+            "id": story.id,
+            "name": story.name,
+            "character": story.character,
+            "topic": story.topic,
+            "story": story.story,
+            "image_url": story.image_url
+        }
+        for story in stories
+    ]
+
+# Save story to database
+@app.post("/save-story")
+def save_story(story_data: StoryCreate):
+    session = SessionLocal()
+    new_story = Story(
+        name=story_data.name,
+        character=story_data.character,
+        topic=story_data.topic,
+        story=story_data.story,
+        image_url=story_data.image_url
+    )
+    session.add(new_story)
+    session.commit()
+    session.refresh(new_story)  # Get the newly inserted story with its ID
+    session.close()
+    return {"message": "Story saved successfully", "story_id": new_story.id}
+
+# Delete a saved story by ID
+@app.delete("/delete-story/{story_id}")
+def delete_story(story_id: int):
+    session = SessionLocal()
+    story = session.query(Story).filter(Story.id == story_id).first()
+    if not story:
+        session.close()
+        raise HTTPException(status_code=404, detail="Story not found")
+    
+    session.delete(story)
+    session.commit()
+    session.close()
+    return {"message": "Story deleted successfully"}
 
 # API route to generate stories
 @app.post("/generate-story")
 def generate_story(request: StoryRequest):
+    session = SessionLocal()
     try:
         prompt_text = f"Write a short children's story about {request.topic} starring a {request.character} named {request.name}."
 
@@ -63,6 +143,11 @@ def generate_story(request: StoryRequest):
         )
 
         image_url = image_response.data[0].url
+
+        # Save to database
+        new_story = Story(name=request.name, character=request.character, topic=request.topic, story=story, image_url=image_url)
+        session.add(new_story)
+        session.commit()
 
         return {"story": story, "image_url": image_url}
 
