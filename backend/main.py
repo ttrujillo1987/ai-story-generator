@@ -8,6 +8,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import openai
 from fastapi.middleware.cors import CORSMiddleware
+import cloudinary;
+import cloudinary.uploader;
 
 # Load environment variables
 load_dotenv()
@@ -18,6 +20,13 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET")
+)
 
 # Check if API key is loaded
 if not OPENAI_API_KEY:
@@ -142,14 +151,22 @@ def generate_story(request: StoryRequest):
             n=1
         )
 
-        image_url = image_response.data[0].url
+        # Download the image and upload it to Cloudinary
+        dall_e_image_url = image_response.data[0].url
+        uploaded_image = cloudinary.uploader.upload(dall_e_image_url)
+        permanent_image_url = uploaded_image["secure_url"]
 
         # Save to database
-        new_story = Story(name=request.name, character=request.character, topic=request.topic, story=story, image_url=image_url)
+        new_story = Story(name=request.name, 
+                          character=request.character, 
+                          topic=request.topic, 
+                          story=story, 
+                          image_url=permanent_image_url)
         session.add(new_story)
         session.commit()
+        session.close()
 
-        return {"story": story, "image_url": image_url}
+        return {"story": story, "image_url": permanent_image_url}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

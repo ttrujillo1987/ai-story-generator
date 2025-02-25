@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import "./styles.css";
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -59,6 +62,64 @@ export default function Home() {
     }
   };
 
+  const downloadPDF = async () => {
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+  
+    const pageWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const marginLeft = 10;
+    const marginTop = 20;
+    const maxWidth = 180; // Text width
+    const lineHeight = 7; // Space between lines
+  
+    // Set the font and title
+    pdf.setFont("times", "bold");
+    pdf.setFontSize(18);
+    pdf.text(`${name}'s AI-Generated Story`, marginLeft, marginTop);
+
+    let textY = marginTop + 10; // Initial Y position for content
+
+    // Add the image
+    const imageElement = document.getElementById("story-image") as HTMLImageElement;
+    if (imageElement) {
+      try {
+        console.log("Capturing image...");
+        const imageCanvas = await html2canvas(imageElement, { useCORS: true });
+        const imgData = imageCanvas.toDataURL("image/png");
+
+        // Calculate image dimensions to maintain aspect ratio
+        const imgWidth = maxWidth; // Make image full width
+        const imgHeight = (imageElement.naturalHeight / imageElement.naturalWidth) * imgWidth; 
+
+        pdf.addImage(imgData, "PNG", marginLeft, textY, imgWidth, imgHeight);
+        textY += imgHeight + 10; // Move text below the image
+      } catch (error) {
+        console.error("Image capture failed:", error);
+      }
+    }
+  
+    // Wrap text properly
+    pdf.setFont("times", "normal");
+    pdf.setFontSize(12);
+    const storyLines = pdf.splitTextToSize(story, maxWidth);
+
+    storyLines.forEach((line: string | string[], index: any) => {
+      if (textY + 10 > pageHeight - 20) { // Check if text exceeds page height
+        pdf.addPage(); // Add new page
+        textY = marginTop; // Reset text position
+      }
+      pdf.text(line, marginLeft, textY);
+      textY += 7; // Line height
+    });
+  
+    // Save PDF with name included
+    pdf.save(`${name}_story.pdf`);
+  };
+
   // Fetch past stories
   const fetchStories = async () => {
     try {
@@ -112,12 +173,15 @@ export default function Home() {
         </button>
       </div>
       {story && (
-        <>
-          <p>{story}</p>
-          {imageUrl && <img src={imageUrl} alt="Generated Story Illustration" />}
+        <div id="story-container" className="story-container">
+          <h3 className="story-title">{name}'s AI-Generated Story</h3>
+          {imageUrl && <img id="story-image" src={imageUrl} alt="Story Illustration" className="story-image" crossOrigin="anonymous" onLoad={() => console.log("Image loaded")} />}
+          <p className="story-text">{story}</p>
           <button onClick={saveStory} disabled={!story}>Save Story</button>
-        </>
-      )}
+          <button onClick={downloadPDF} disabled={!story}>Download as PDF</button>
+        </div>
+)}
+
 
       {!showPastStories && (
         <button onClick={fetchStories}>Show Past Stories</button>
