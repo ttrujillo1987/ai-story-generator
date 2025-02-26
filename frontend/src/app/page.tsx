@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import "./styles.css";
+import "./globals.css";
+import { motion } from "framer-motion";
 
 export default function Home() {
   const [name, setName] = useState("");
@@ -150,91 +151,81 @@ export default function Home() {
   };
 
   return (
-    <div className="container">
-      <h1>AI-Powered Children's Story Generator</h1>
-      <div className="input-container">
+    <div className="flex flex-col items-center min-h-screen bg-gray-100 p-6">
+      <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">AI-Powered Children's Story Generator</h1>
+      <div className="w-full max-w-md bg-white p-6 rounded-xl shadow-md">
         <input
           placeholder="Child's Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          className="w-full mb-3 p-2 border rounded-lg text-gray-500 placeholder-gray-300"
         />
         <input
           placeholder="Character Type (e.g., wizard, astronaut, dragon)"
           value={character}
           onChange={(e) => setCharacter(e.target.value)}
+          className="w-full mb-3 p-2 border rounded-lg text-gray-500 placeholder-gray-300"
         />
         <input
-          placeholder="Story Topic"
+          placeholder="Story Topic (e.g. Space Adventure, Pirate Adventure)"
           value={topic}
           onChange={(e) => setTopic(e.target.value)}
+          className="w-full mb-3 p-2 border rounded-lg text-gray-500 placeholder-gray-300"
         />
-        <button onClick={generateStory} disabled={loading}>
+        <button onClick={generateStory} disabled={loading} className="w-full bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition">
           {loading ? "Generating..." : "Generate Story"}
         </button>
       </div>
       {story && (
-        <div id="story-container" className="story-container">
-          <h3 className="story-title">{name}'s AI-Generated Story</h3>
-          {imageUrl && <img id="story-image" src={imageUrl} alt="Story Illustration" className="story-image" crossOrigin="anonymous" onLoad={() => console.log("Image loaded")} />}
-          <p className="story-text">{story}</p>
-          <button onClick={saveStory} disabled={!story}>Save Story</button>
-          <button onClick={downloadPDF} disabled={!story}>Download as PDF</button>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          id="story-container" 
+          className="mt-6 w-full max-w-lg bg-white p-6 rounded-xl shadow-md"
+          >
+          <h3 className="text-lg font-semibold text-gray-800">{name} - {topic}</h3>
+          {imageUrl && (
+            <motion.img 
+              id="story-image" 
+              src={imageUrl} 
+              alt="Story Illustration" 
+              className="w-full" 
+              crossOrigin="anonymous" 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1 }}
+              onLoad={() => console.log("Image loaded")} 
+              />)}
+          <p className="text-gray-600">{story}</p>
+          <button onClick={saveStory} disabled={!story} className="w-full mt-4 bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition">Save Story</button>
+          <button onClick={downloadPDF} disabled={!story} className="w-full mt-4 bg-green-500 text-white p-2 rounded-lg hover:bg-green-600 transition">Download as PDF</button>
+        </motion.div>
 )}
 
 
       {!showPastStories && (
-        <button onClick={fetchStories}>Show Past Stories</button>
+        <button onClick={fetchStories} className="w-96 mt-4 border-2 border-green-500 bg-transparent text-green-500 p-2 rounded-lg hover:bg-green-500 hover:text-white transition">Show Past Stories</button>
       )}
 
       {showPastStories && (
-        <button onClick={hideStories}>Hide Past Stories</button>
+        <button onClick={hideStories} className="w-96 mt-4 border-2 border-green-500 bg-transparent text-green-500 p-2 rounded-lg hover:bg-green-500 hover:text-white transition">Hide Past Stories</button>
       )}
 
       {showPastStories && pastStories.length > 0 && (
-        <div>
-          <h2>Past Stories</h2>
-          <div className="story-card">
-            <h3>{pastStories[currentStoryIndex].name} - {pastStories[currentStoryIndex].character}</h3>
-            <p>{pastStories[currentStoryIndex].story}</p>
-            <img src={pastStories[currentStoryIndex].image_url} alt="Story Illustration" />
-            <button onClick={() => deleteStory(pastStories[currentStoryIndex].id)}>Delete</button>
+        <div className="mt-6 w-full max-w-lg bg-white p-6 rounded-xl shadow-md">
+          <h2 className="hidden">Past Stories</h2>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-800">{pastStories[currentStoryIndex].name} - {pastStories[currentStoryIndex].topic}</h3>
+            <p className="text-gray-600">{pastStories[currentStoryIndex].story}</p>
+            <img src={pastStories[currentStoryIndex].image_url} className="w-full"alt="Story Illustration" />
+            <button onClick={() => deleteStory(pastStories[currentStoryIndex].id)} className="w-48 mt-4 border-2 border-red-500 bg-transparent text-red-500 p-2 rounded-lg hover:bg-red-500 hover:text-white transition">Delete</button>
           </div>
 
-          <button onClick={() => setCurrentStoryIndex((currentStoryIndex - 1 + pastStories.length) % pastStories.length)}>Previous</button>
-          <button onClick={() => setCurrentStoryIndex((currentStoryIndex + 1) % pastStories.length)}>Next</button>
+          <button onClick={() => setCurrentStoryIndex((currentStoryIndex - 1 + pastStories.length) % pastStories.length)} className="w-48 mt-4 mr-2 border-2 border-blue-500 bg-transparent text-blue-500 p-2 rounded-lg hover:bg-blue-500 hover:text-white transition">Previous</button>
+          <button onClick={() => setCurrentStoryIndex((currentStoryIndex + 1) % pastStories.length)} className="w-48 mt-4 border-2 border-blue-500 bg-transparent text-blue-500 p-2 rounded-lg hover:bg-blue-500 hover:text-white transition">Next</button>
         </div>
       )}
-      
-      <style jsx>{`
-        .container {
-          text-align: center;
-          padding: 2rem;
-          font-family: Arial, sans-serif;
-        }
-        .input-container {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          margin: 20px auto;
-          width: 300px;
-        }
-        input, button {
-          padding: 10px;
-          font-size: 16px;
-        }
-        .story {
-          margin-top: 20px;
-          font-style: italic;
-          color: #333;
-          white-space: pre-line;
-        }
-        .story-image {
-          margin-top: 20px;
-          width: 300px;
-          border-radius: 10px;
-        }
-      `}</style>
     </div>
   );
 }
